@@ -1,1 +1,75 @@
-const note=document.querySelector("#note"),count=document.querySelector("#charCount"),saveStatus=document.querySelector("#saveStatus"),networkStatus=document.querySelector("#networkStatus"),clearButton=document.querySelector("#clearNote"),installButton=document.querySelector("#installButton");const KEY="pwa-spark-note";let installPrompt=null,timer;function updateCount(){count.textContent=note.value.length+" / 2000"}function save(){try{localStorage.setItem(KEY,note.value);saveStatus.textContent="Saved locally"}catch{saveStatus.textContent="Could not save"}}function updateNetwork(){const online=navigator.onLine;networkStatus.textContent=online?"Online":"Offline";networkStatus.classList.toggle("offline",!online)}try{note.value=localStorage.getItem(KEY)||""}catch{}updateCount();updateNetwork();note.addEventListener("input",()=>{updateCount();saveStatus.textContent="Saving...";clearTimeout(timer);timer=setTimeout(save,250)});clearButton.addEventListener("click",()=>{note.value="";updateCount();save();note.focus()});window.addEventListener("online",updateNetwork);window.addEventListener("offline",updateNetwork);window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;installButton.hidden=false});installButton.addEventListener("click",async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;installButton.hidden=true});window.addEventListener("appinstalled",()=>{installPrompt=null;installButton.hidden=true});if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{saveStatus.textContent="Offline setup unavailable"}));
+const root = document.documentElement;
+const themeToggle = document.querySelector("#themeToggle");
+const connectionStatus = document.querySelector("#connectionStatus");
+const liveStatus = document.querySelector("#liveStatus");
+const installButtons = [
+  document.querySelector("#installBtn"),
+  document.querySelector("#heroInstallBtn"),
+  document.querySelector("#ctaInstallBtn")
+];
+
+let deferredPrompt = null;
+
+function applyTheme(theme) {
+  root.dataset.theme = theme;
+  localStorage.setItem("pulse-theme", theme);
+  themeToggle.setAttribute("aria-label", `Switch to ${theme === "dark" ? "light" : "dark"} theme`);
+}
+
+const savedTheme = localStorage.getItem("pulse-theme");
+const preferredTheme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+applyTheme(savedTheme || preferredTheme);
+
+themeToggle.addEventListener("click", () => {
+  applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
+});
+
+function updateConnectionUI() {
+  const online = navigator.onLine;
+  liveStatus.textContent = online ? "Online" : "Offline";
+  connectionStatus.hidden = online;
+  connectionStatus.textContent = online ? "" : "You’re offline. Cached content is still available.";
+}
+
+window.addEventListener("online", updateConnectionUI);
+window.addEventListener("offline", updateConnectionUI);
+updateConnectionUI();
+
+function setInstallButtonsVisible(visible) {
+  installButtons.forEach((button) => {
+    if (button) button.hidden = !visible;
+  });
+}
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredPrompt = event;
+  setInstallButtonsVisible(true);
+});
+
+async function promptInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  setInstallButtonsVisible(false);
+}
+
+installButtons.forEach((button) => button?.addEventListener("click", promptInstall));
+
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
+  setInstallButtonsVisible(false);
+});
+
+document.querySelector("#year").textContent = new Date().getFullYear();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      await navigator.serviceWorker.register("./sw.js");
+    } catch (error) {
+      console.error("Service worker registration failed:", error);
+    }
+  });
+}
