@@ -1,0 +1,13 @@
+{
+  "name": "Wine Atlas",
+  "short_name": "Wine Atlas",
+  "description": "An educational atlas of wine history, regions, grapes, production, terminology, and global culture.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f3ec",
+  "theme_color": "#5b1f2d",
+  "orientation": "portrait-primary",
+  "lang": "en",
+  "categories": ["education", "reference"]
+}
